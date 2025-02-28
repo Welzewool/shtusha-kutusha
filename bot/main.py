@@ -31,7 +31,7 @@ class MyBot(commands.Bot):
         intents = discord.Intents.all()
         intents.message_content = True
         super().__init__(
-            command_prefix=commands.when_mentioned_or('/'),
+            command_prefix=commands.when_mentioned_or('!'),
             intents=intents,
             help_command=None
         )
