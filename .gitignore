@@ -1,0 +1,4 @@
+/.idea/.gitignore
+/.env
+/.idea/vcs.xml
+/tests/bot.db
