@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-green.svg)](https://www.python.org/)
 [![Discord.py](https://img.shields.io/badge/discord.py-2.0%2B-blue.svg)](https://discordpy.readthedocs.io/)
 
-Stusha-Kutusha — это удобный бот для установки напоминаний. Он позволяет устанавливать напоминания на определённое время или через промежуток времени.
+Shtusha-Kutusha — это удобный бот для установки напоминаний. Он позволяет устанавливать напоминания на определённое время или через промежуток времени.
 
 ---
 
