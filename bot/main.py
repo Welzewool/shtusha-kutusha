@@ -78,7 +78,7 @@ bot = MyBot()
 
 @tasks.loop(minutes=15)
 async def update_status():
-    """Обновление статусы через определенное время tasks.loop(minutes=?)"""
+    """Обновление статуса через определенное время tasks.loop(minutes=?)"""
     try:
         activities = await bot.get_live_stats()
         bot.status_cycle = (bot.status_cycle + 1) % len(activities)
@@ -101,6 +101,7 @@ async def on_ready():
 
 
 async def restore_reminders():
+    """Восстановление напоминаний из базы данных"""
     try:
         reminders = await get_pending_reminders()
         logger.info(f"Восстановление {len(reminders)} напоминания из базы данных")
@@ -154,6 +155,7 @@ async def badge(ctx: commands.Context):
 
 @badge.error
 async def active_developer_badge_error(ctx: commands.Context, error):
+
     if isinstance(error, commands.CheckFailure):
         await ctx.send("❌ Эта команда доступна только администратору.", ephemeral=True)
     else:
