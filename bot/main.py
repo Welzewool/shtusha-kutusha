@@ -3,12 +3,22 @@ import logging
 import discord
 import datetime
 from discord.ext import commands, tasks
+from discord import Activity, ActivityType
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dateparser import parse
+from typing import List
 from dotenv import load_dotenv
 from bot.database import init_db, add_reminder, get_pending_reminders, delete_reminder
 
 discord.voice_client.VoiceClient.warn_nacl = False
+
+
+def is_admin():
+    """Проверка админ прав пользователя"""
+    async def predicate(ctx: commands.Context) -> bool:
+        return ctx.author.id == int(os.getenv('ADMIN_ID'))
+    return commands.check(predicate)
+
 
 def setup_logging():
     logging.basicConfig(
@@ -35,7 +45,7 @@ class MyBot(commands.Bot):
             intents=intents,
             help_command=None
         )
-
+        self.status_cycle = 0
         self.scheduler = AsyncIOScheduler()
 
     async def setup_hook(self):
@@ -46,13 +56,48 @@ class MyBot(commands.Bot):
         await self.tree.sync()
         logger.info('Бот готов к работе')
 
+    async def get_live_stats(self) -> List[Activity]:
+        """Генерирует статусы с живой статистикой"""
+        return [
+            Activity(
+                type=ActivityType.watching,
+                name=f"за {len(self.guilds)} сервером(-ами)"
+            ),
+            Activity(
+                type=ActivityType.watching,
+                name=f"на онлайн: {sum(g.member_count for g in self.guilds)}"
+            ),
+            Activity(
+                type=ActivityType.playing,
+                name=f"игры в {round(self.latency * 1000)}мс"
+            )
+        ]
+
+
 bot = MyBot()
+
+@tasks.loop(minutes=15)
+async def update_status():
+    """Обновление статусы через определенное время tasks.loop(minutes=?)"""
+    try:
+        activities = await bot.get_live_stats()
+        bot.status_cycle = (bot.status_cycle + 1) % len(activities)
+
+        await bot.change_presence(
+            activity=activities[bot.status_cycle],
+            status=discord.Status.online
+        )
+        logger.info(f"Updated status to: {activities[bot.status_cycle].name}")
+    except Exception as e:
+        logger.error(f"Status update error: {str(e)}")
+
 
 @bot.event
 async def on_ready():
     logger.info(f'{bot.user} успешно запущен!')
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     await restore_reminders()
+    update_status.start()
 
 
 async def restore_reminders():
@@ -86,9 +131,11 @@ async def send_reminder(user_id: int, channel_id: int, message: str, reminder_id
     except Exception as e:
         logger.error(f"Ошибка отправки напоминания {reminder_id}: {str(e)}")
 
+
 @bot.hybrid_command()
-async def active_developer_badge(ctx: commands.Context):
-    """Получить бейдж активного разработчика Discord"""
+@is_admin()
+async def badge(ctx: commands.Context):
+    """Команда доступная админу"""
     try:
         embed = discord.Embed(
             title="Program Ran Successfully",
@@ -105,9 +152,18 @@ async def active_developer_badge(ctx: commands.Context):
     except Exception as e:
         logger.error(f"Error in active_developer_badge: {str(e)}")
 
+@badge.error
+async def active_developer_badge_error(ctx: commands.Context, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("❌ Эта команда доступна только администратору.", ephemeral=True)
+    else:
+        logger.error(f"Error in active_developer_badge: {str(error)}")
+        await ctx.send("❌ Произошла ошибка при выполнении команды.", ephemeral=True)
+
+
 @bot.hybrid_command()
 async def remind(ctx: commands.Context, time_str: str, *, message: str):
-    """Установить напоминание
+    """Установить напоминание: "через 1 час" или время "18:15" без кавычек
     Пример: /remind in 1 hour Приготовить пюрешечку с котлетками или /remind через 1 час(либо минуты)
     Пример 2: /remind 18:25 Приготовить пюрешечку с котлетками
     Поддерживаемые форматы:
