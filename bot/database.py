@@ -2,7 +2,7 @@ import aiosqlite
 import datetime
 from typing import List, Tuple
 
-DB_NAME = 'bot.db'
+DB_NAME = '/app/bot/bot.db'
 
 
 async def init_db():
